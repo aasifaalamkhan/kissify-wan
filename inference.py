@@ -3,6 +3,8 @@ import torch
 import uuid
 import gc
 from PIL import Image
+import json
+from huggingface_hub import snapshot_download
 
 # Import the necessary pipeline and the standard AutoencoderKL class
 from diffusers import I2VGenXLPipeline, AutoencoderKL
@@ -33,20 +35,39 @@ print("[INFO] Initializing new I2V pipeline...", flush=True)
 device = "cuda"
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# --- WORKAROUND: The original model's VAE is broken. We load a standard one instead. ---
+# --- WORKAROUND: Edit the model's config to remove the broken VAE reference ---
 
-# 1. Load a standard, high-quality VAE from Stability AI.
-print("[INFO] Step 1/2: Loading a standard, known-good VAE...")
+# 1. Download the model files to a local directory
+print("[INFO] Step 1/4: Downloading model files...")
+model_path = snapshot_download(
+    base_model_id,
+    cache_dir=os.getenv("HF_HOME")
+)
+
+# 2. Edit the main config file to remove the broken VAE entry
+print("[INFO] Step 2/4: Applying patch to model configuration...")
+model_index_path = os.path.join(model_path, "model_index.json")
+with open(model_index_path, 'r') as f:
+    data = json.load(f)
+
+if 'vae' in data:
+    del data['vae'] # Delete the problematic VAE key
+
+with open(model_index_path, 'w') as f:
+    json.dump(data, f, indent=4) # Save the patched config
+
+# 3. Load a standard, high-quality VAE from Stability AI.
+print("[INFO] Step 3/4: Loading a standard, known-good VAE...")
 vae = AutoencoderKL.from_pretrained(
     "stabilityai/sd-vae-ft-mse",
     torch_dtype=torch.float16
 )
 
-# 2. Load the main I2V pipeline and override its VAE with our working version.
-print("[INFO] Step 2/2: Loading the main I2V pipeline with the replacement VAE...")
+# 4. Load the main pipeline from the LOCAL, patched files, injecting our working VAE.
+print("[INFO] Step 4/4: Loading the main pipeline with the replacement VAE...")
 pipe = I2VGenXLPipeline.from_pretrained(
-    base_model_id,
-    vae=vae, # Pass in our working VAE to replace the broken one.
+    model_path, # Load from the local path, not the Hub ID
+    vae=vae,
     torch_dtype=torch.float16
 ).to(device)
 
