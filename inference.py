@@ -3,7 +3,8 @@ import torch
 import uuid
 import gc
 from PIL import Image
-from diffusers import I2VGenXLPipeline
+# We now need AutoencoderKL for the manual loading fix
+from diffusers import I2VGenXLPipeline, AutoencoderKL
 from diffusers.utils import export_to_video
 
 from utils import (
@@ -49,11 +50,25 @@ device = "cuda"
 # The powerful Image-to-Video base model
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
+# --- NEW 2-STEP LOADING PROCESS TO FIX THE ERROR ---
+
+# 1. Manually load the VAE component first, applying trust_remote_code directly to it.
+print("[INFO] Step 1/2: Manually loading VAE with remote code...")
+vae = AutoencoderKL.from_pretrained(
+    base_model_id,
+    subfolder="vae",
+    torch_dtype=torch.float16,
+    trust_remote_code=True
+)
+
+# 2. Load the main pipeline, passing in our pre-loaded VAE.
+print("[INFO] Step 2/2: Loading main pipeline with custom VAE...")
 pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
-    torch_dtype=torch.float16,
-    trust_remote_code=True # ADDED: This line fixes the error
+    vae=vae,
+    torch_dtype=torch.float16
 ).to(device)
+
 
 # --- Load BOTH compatible LoRAs ---
 print("[INFO] Loading and combining two Kissing LoRAs...", flush=True)
