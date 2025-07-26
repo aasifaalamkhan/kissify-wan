@@ -14,6 +14,34 @@ from utils import (
 OUTPUT_DIR = "/workspace/outputs"
 
 
+# --- NEW: Helper function to display image as ASCII art in the terminal ---
+def image_to_ascii(image, width=100):
+    """Converts a PIL Image to an ASCII string representation."""
+    # ASCII characters used to build the output text
+    ASCII_CHARS = "@%#*+=-:. "
+    
+    # Resize the image and convert to grayscale
+    aspect_ratio = image.height / image.width
+    new_height = int(aspect_ratio * width * 0.55) # 0.55 corrects for non-square character cells
+    resized_image = image.resize((width, new_height)).convert("L")
+    
+    # Get pixel data
+    pixels = resized_image.getdata()
+    
+    # Map each pixel to an ASCII character
+    ascii_str = ""
+    for pixel_value in pixels:
+        # Normalize pixel value to the range of ASCII_CHARS
+        ascii_str += ASCII_CHARS[pixel_value * (len(ASCII_CHARS) - 1) // 255]
+    
+    # Format as a multi-line string
+    final_art = ""
+    for i in range(0, len(ascii_str), width):
+        final_art += ascii_str[i:i+width] + "\n"
+        
+    return f"\n--- Composite Image ASCII Preview ---\n{final_art}-------------------------------------\n"
+
+
 # --- Load Models (NEW I2V PIPELINE) ---
 print("[INFO] Initializing new I2V pipeline...", flush=True)
 device = "cuda"
@@ -34,7 +62,7 @@ pipe.load_lora_weights("ighoshsubho/Wan-I2V-LoRA-Kiss", weight_name="i2v-custom-
 # Load the second LoRA for style and the specific trigger
 pipe.load_lora_weights("Remade-AI/kissing", adapter_name="style")
 
-# --- NEW: Set adapter weights based on model card recommendations ---
+# --- Set adapter weights based on model card recommendations ---
 # 'motion' (ighoshsubho) at 0.9 and 'style' (Remade-AI) at 1.0
 pipe.set_adapters(["motion", "style"], adapter_weights=[0.9, 1.0])
 
@@ -64,16 +92,20 @@ def generate_kissing_video(input_data):
         composite_image.paste(face1_cropped, (0, 0))
         composite_image.paste(face2_cropped, (224, 0))
 
+        # --- NEW: Print the ASCII art preview to the SSH console log ---
+        # This will not be sent to the GUI, it will only appear in the server log.
+        print(image_to_ascii(composite_image))
+
         composite_filename = f"{unique_id}_composite.jpg"
         composite_image_path = os.path.join(OUTPUT_DIR, composite_filename)
         composite_image.save(composite_image_path)
         yield {'composite_filename': composite_filename}
 
-        # --- NEW: Highly descriptive prompt using recommended structure and trigger words ---
+        # --- Highly descriptive prompt using recommended structure and trigger words ---
         prompt = "A man and a woman are embracing near a lake with mountains in the background. They gaze into each other's eyes, then they share a tender and passionate k144ing kissing. masterpiece, best quality, realistic, high resolution, cinematic film still"
         negative_prompt = "monochrome, lowres, bad anatomy, worst quality, low quality, blurry, nsfw, text, watermark, logo, deformed, distorted, disfigured, cartoon, anime"
         
-        # --- NEW: Generation parameters aligned with LoRA documentation ---
+        # --- Generation parameters aligned with LoRA documentation ---
         num_frames = 65
         num_inference_steps = 50
         guidance_scale = 6.0 # Changed from 7.5 to recommended 6.0
