@@ -28,15 +28,17 @@ def image_to_ascii(image, width=100):
 
 # --- Load Models ---
 print("[INFO] Initializing I2V pipeline...", flush=True)
-device = "cuda"
+# No need to specify device here, device_map will handle it
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# CORRECTED: Use DiffusionPipeline to automatically load the model's custom pipeline code
+# CORRECTED: Use device_map="auto" to intelligently split the model between GPU and CPU
+# REMOVED: .to(device) at the end, as device_map handles placement
 pipe = DiffusionPipeline.from_pretrained(
     base_model_id,
     torch_dtype=torch.float16,
-    trust_remote_code=True # This allows loading the custom pipeline
-).to(device)
+    trust_remote_code=True,
+    device_map="auto"
+)
 
 # --- Load BOTH compatible LoRAs ---
 print("[INFO] Loading and combining two Kissing LoRAs...", flush=True)
