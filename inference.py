@@ -28,7 +28,8 @@ def image_to_ascii(image, width=100):
 print("[INFO] Initializing I2V pipeline...", flush=True)
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# CORRECTED: Added low_cpu_mem_usage=True for most memory-efficient loading
+# Use DiffusionPipeline to automatically load the model's custom pipeline code
+# Use device_map="balanced" and low_cpu_mem_usage=True to handle the large model size
 pipe = DiffusionPipeline.from_pretrained(
     base_model_id,
     torch_dtype=torch.float16,
@@ -84,7 +85,6 @@ def generate_kissing_video(input_data):
 
         yield f"🎨 Step 2/4: Generating {num_frames} frames of video..."
 
-        # The pipeline call remains the same
         video_frames = pipe(
             prompt=prompt,
             image=composite_image,

@@ -1,10 +1,10 @@
 torch==2.1.1
-diffusers==0.33.0
-transformers>=4.42.0
-accelerate>=0.31.0
-huggingface_hub>=0.23.0
-peft>=0.15.0
-ftfy
+diffusers==0.28.0
+transformers==4.38.2
+accelerate==0.27.2
+peft==0.9.0
+ftfy==6.2.0
+huggingface_hub
 Pillow
 requests
 Flask
