@@ -3,7 +3,8 @@ import torch
 import uuid
 import gc
 from PIL import Image
-from diffusers import I2VTransformerPipeline
+# Corrected the import statement below
+from diffusers import I2VGenXLPipeline
 from diffusers.utils import export_to_video
 
 from utils import (
@@ -19,26 +20,26 @@ def image_to_ascii(image, width=100):
     """Converts a PIL Image to an ASCII string representation."""
     # ASCII characters used to build the output text
     ASCII_CHARS = "@%#*+=-:. "
-    
+
     # Resize the image and convert to grayscale
     aspect_ratio = image.height / image.width
     new_height = int(aspect_ratio * width * 0.55) # 0.55 corrects for non-square character cells
     resized_image = image.resize((width, new_height)).convert("L")
-    
+
     # Get pixel data
     pixels = resized_image.getdata()
-    
+
     # Map each pixel to an ASCII character
     ascii_str = ""
     for pixel_value in pixels:
         # Normalize pixel value to the range of ASCII_CHARS
         ascii_str += ASCII_CHARS[pixel_value * (len(ASCII_CHARS) - 1) // 255]
-    
+
     # Format as a multi-line string
     final_art = ""
     for i in range(0, len(ascii_str), width):
         final_art += ascii_str[i:i+width] + "\n"
-        
+
     return f"\n--- Composite Image ASCII Preview ---\n{final_art}-------------------------------------\n"
 
 
@@ -49,7 +50,8 @@ device = "cuda"
 # The powerful Image-to-Video base model
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-pipe = I2VTransformerPipeline.from_pretrained(
+# Corrected the class name from I2VTransformerPipeline to I2VGenXLPipeline
+pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
     torch_dtype=torch.float16,
     variant="fp16"
@@ -104,14 +106,14 @@ def generate_kissing_video(input_data):
         # --- Highly descriptive prompt using recommended structure and trigger words ---
         prompt = "A man and a woman are embracing near a lake with mountains in the background. They gaze into each other's eyes, then they share a tender and passionate k144ing kissing. masterpiece, best quality, realistic, high resolution, cinematic film still"
         negative_prompt = "monochrome, lowres, bad anatomy, worst quality, low quality, blurry, nsfw, text, watermark, logo, deformed, distorted, disfigured, cartoon, anime"
-        
+
         # --- Generation parameters aligned with LoRA documentation ---
         num_frames = 65
         num_inference_steps = 50
         guidance_scale = 6.0 # Changed from 7.5 to recommended 6.0
 
         yield f"🎨 Step 2/4: Generating {num_frames} frames of video..."
-        
+
         with torch.inference_mode():
             video_frames = pipe(
                 prompt=prompt,
