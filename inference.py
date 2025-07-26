@@ -3,7 +3,6 @@ import torch
 import uuid
 import gc
 from PIL import Image
-# Corrected the import statement below
 from diffusers import I2VGenXLPipeline
 from diffusers.utils import export_to_video
 
@@ -50,11 +49,10 @@ device = "cuda"
 # The powerful Image-to-Video base model
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# Corrected the class name from I2VTransformerPipeline to I2VGenXLPipeline
 pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
-    torch_dtype=torch.float16
-    # REMOVED: variant="fp16" - This was causing the error
+    torch_dtype=torch.float16,
+    trust_remote_code=True # ADDED: This line fixes the error
 ).to(device)
 
 # --- Load BOTH compatible LoRAs ---
