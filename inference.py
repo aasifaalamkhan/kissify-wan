@@ -3,35 +3,9 @@ import torch
 import uuid
 import gc
 from PIL import Image
-from huggingface_hub import snapshot_download
-import importlib.util # Import for the fix
 
-# --- This block is the core of the fix ---
-# Find the local path of the downloaded model.
-print("[INFO] Finding local model path to load custom code...")
-base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
-
-# MODIFIED: Force download of all necessary file types, including .py files.
-model_path = snapshot_download(
-    base_model_id,
-    cache_dir=os.getenv("HF_HOME"),
-    allow_patterns=["*.json", "*.py", "*.safetensors"]
-)
-
-# Construct the full path to the custom VAE python file
-vae_code_path = os.path.join(model_path, "vae", "modeling_autoencoder_kl_wan.py")
-
-# Explicitly load the python module from its file path
-print(f"[INFO] Loading custom module from: {vae_code_path}")
-spec = importlib.util.spec_from_file_location("modeling_autoencoder_kl_wan", vae_code_path)
-custom_vae_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(custom_vae_module)
-
-# Get the custom class from the dynamically loaded module
-AutoencoderKLWan = custom_vae_module.AutoencoderKLWan
-# --- End of the fix block ---
-
-from diffusers import I2VGenXLPipeline
+# Import the necessary pipeline and the standard AutoencoderKL class
+from diffusers import I2VGenXLPipeline, AutoencoderKL
 from diffusers.utils import export_to_video
 from utils import (
     load_face_images, crop_face
@@ -54,25 +28,25 @@ def image_to_ascii(image, width=100):
     return f"\n--- Composite Image ASCII Preview ---\n{final_art}\n-------------------------------------\n"
 
 
-# --- Load Models (NEW I2V PIPELINE) ---
+# --- Load Models ---
 print("[INFO] Initializing new I2V pipeline...", flush=True)
 device = "cuda"
+base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# --- 2-STEP LOADING PROCESS WITH THE CORRECT CUSTOM CLASS ---
+# --- WORKAROUND: The original model's VAE is broken. We load a standard one instead. ---
 
-# 1. Manually load the VAE component using its true custom class that we just loaded.
-print("[INFO] Step 1/2: Manually loading VAE with its custom class (AutoencoderKLWan)...")
-vae = AutoencoderKLWan.from_pretrained(
-    base_model_id,
-    subfolder="vae",
+# 1. Load a standard, high-quality VAE from Stability AI.
+print("[INFO] Step 1/2: Loading a standard, known-good VAE...")
+vae = AutoencoderKL.from_pretrained(
+    "stabilityai/sd-vae-ft-mse",
     torch_dtype=torch.float16
 )
 
-# 2. Load the main pipeline, passing in our correctly pre-loaded VAE.
-print("[INFO] Step 2/2: Loading main pipeline...")
+# 2. Load the main I2V pipeline and override its VAE with our working version.
+print("[INFO] Step 2/2: Loading the main I2V pipeline with the replacement VAE...")
 pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
-    vae=vae,
+    vae=vae, # Pass in our working VAE to replace the broken one.
     torch_dtype=torch.float16
 ).to(device)
 
