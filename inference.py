@@ -1,11 +1,27 @@
 import os
+import sys
 import torch
 import uuid
 import gc
 from PIL import Image
-# We now need AutoencoderKL for the manual loading fix
-from diffusers import I2VGenXLPipeline, AutoencoderKL
+from huggingface_hub import snapshot_download
+
+# --- This block is the core of the new fix ---
+# Find the local path of the downloaded model.
+# This assumes HF_HOME is set, which it should be in your RunPod environment.
+print("[INFO] Finding local model path to load custom code...")
+base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+model_path = snapshot_download(base_model_id, cache_dir=os.getenv("HF_HOME"))
+
+# Add the VAE's code folder to Python's path to make it discoverable
+vae_path = os.path.join(model_path, "vae")
+sys.path.append(vae_path)
+
+# Now that the path is set, we can explicitly import the custom class
+from modeling_autoencoder_kl_wan import AutoencoderKLWan
+from diffusers import I2VGenXLPipeline
 from diffusers.utils import export_to_video
+# --- End of the new fix block ---
 
 from utils import (
     load_face_images, crop_face
@@ -47,22 +63,18 @@ def image_to_ascii(image, width=100):
 print("[INFO] Initializing new I2V pipeline...", flush=True)
 device = "cuda"
 
-# The powerful Image-to-Video base model
-base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+# --- NEW 2-STEP LOADING PROCESS WITH THE CORRECT CUSTOM CLASS ---
 
-# --- NEW 2-STEP LOADING PROCESS TO FIX THE ERROR ---
-
-# 1. Manually load the VAE component first, applying trust_remote_code directly to it.
-print("[INFO] Step 1/2: Manually loading VAE with remote code...")
-vae = AutoencoderKL.from_pretrained(
+# 1. Manually load the VAE component using its true custom class.
+print("[INFO] Step 1/2: Manually loading VAE with its custom class (AutoencoderKLWan)...")
+vae = AutoencoderKLWan.from_pretrained(
     base_model_id,
     subfolder="vae",
-    torch_dtype=torch.float16,
-    trust_remote_code=True
+    torch_dtype=torch.float16
 )
 
-# 2. Load the main pipeline, passing in our pre-loaded VAE.
-print("[INFO] Step 2/2: Loading main pipeline with custom VAE...")
+# 2. Load the main pipeline, passing in our correctly pre-loaded VAE.
+print("[INFO] Step 2/2: Loading main pipeline...")
 pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
     vae=vae,
