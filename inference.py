@@ -1,28 +1,32 @@
 import os
-import sys
 import torch
 import uuid
 import gc
 from PIL import Image
 from huggingface_hub import snapshot_download
+import importlib.util # NEW: Import for the fix
 
 # --- This block is the core of the new fix ---
 # Find the local path of the downloaded model.
-# This assumes HF_HOME is set, which it should be in your RunPod environment.
 print("[INFO] Finding local model path to load custom code...")
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 model_path = snapshot_download(base_model_id, cache_dir=os.getenv("HF_HOME"))
 
-# Add the VAE's code folder to Python's path to make it discoverable
-vae_path = os.path.join(model_path, "vae")
-sys.path.append(vae_path)
+# Construct the full path to the custom VAE python file
+vae_code_path = os.path.join(model_path, "vae", "modeling_autoencoder_kl_wan.py")
 
-# Now that the path is set, we can explicitly import the custom class
-from modeling_autoencoder_kl_wan import AutoencoderKLWan
-from diffusers import I2VGenXLPipeline
-from diffusers.utils import export_to_video
+# Explicitly load the python module from its file path
+print(f"[INFO] Loading custom module from: {vae_code_path}")
+spec = importlib.util.spec_from_file_location("modeling_autoencoder_kl_wan", vae_code_path)
+custom_vae_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(custom_vae_module)
+
+# Get the custom class from the dynamically loaded module
+AutoencoderKLWan = custom_vae_module.AutoencoderKLWan
 # --- End of the new fix block ---
 
+from diffusers import I2VGenXLPipeline
+from diffusers.utils import export_to_video
 from utils import (
     load_face_images, crop_face
 )
@@ -65,7 +69,7 @@ device = "cuda"
 
 # --- NEW 2-STEP LOADING PROCESS WITH THE CORRECT CUSTOM CLASS ---
 
-# 1. Manually load the VAE component using its true custom class.
+# 1. Manually load the VAE component using its true custom class that we just loaded.
 print("[INFO] Step 1/2: Manually loading VAE with its custom class (AutoencoderKLWan)...")
 vae = AutoencoderKLWan.from_pretrained(
     base_model_id,
