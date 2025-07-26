@@ -53,8 +53,8 @@ base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 # Corrected the class name from I2VTransformerPipeline to I2VGenXLPipeline
 pipe = I2VGenXLPipeline.from_pretrained(
     base_model_id,
-    torch_dtype=torch.float16,
-    variant="fp16"
+    torch_dtype=torch.float16
+    # REMOVED: variant="fp16" - This was causing the error
 ).to(device)
 
 # --- Load BOTH compatible LoRAs ---
