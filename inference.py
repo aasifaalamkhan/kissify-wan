@@ -3,8 +3,6 @@ import torch
 import uuid
 import gc
 from PIL import Image
-
-# CORRECTED: Import the generic DiffusionPipeline, not a specific one
 from diffusers import DiffusionPipeline
 from diffusers.utils import export_to_video
 from utils import (
@@ -28,16 +26,14 @@ def image_to_ascii(image, width=100):
 
 # --- Load Models ---
 print("[INFO] Initializing I2V pipeline...", flush=True)
-# No need to specify device here, device_map will handle it
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# CORRECTED: Use device_map="auto" to intelligently split the model between GPU and CPU
-# REMOVED: .to(device) at the end, as device_map handles placement
+# CORRECTED: Use device_map="balanced" as required by this pipeline
 pipe = DiffusionPipeline.from_pretrained(
     base_model_id,
     torch_dtype=torch.float16,
     trust_remote_code=True,
-    device_map="auto"
+    device_map="balanced"
 )
 
 # --- Load BOTH compatible LoRAs ---
