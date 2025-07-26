@@ -28,12 +28,13 @@ def image_to_ascii(image, width=100):
 print("[INFO] Initializing I2V pipeline...", flush=True)
 base_model_id = "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
 
-# CORRECTED: Use device_map="balanced" as required by this pipeline
+# CORRECTED: Added low_cpu_mem_usage=True for most memory-efficient loading
 pipe = DiffusionPipeline.from_pretrained(
     base_model_id,
     torch_dtype=torch.float16,
     trust_remote_code=True,
-    device_map="balanced"
+    device_map="balanced",
+    low_cpu_mem_usage=True
 )
 
 # --- Load BOTH compatible LoRAs ---
