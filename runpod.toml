@@ -4,7 +4,8 @@ cuda_version = "12.1"
 system_packages = [
     "ffmpeg",
     "libgl1-mesa-glx",
-    "libglib2.0-0"
+    "libglib2.0-0",
+    # Add any additional system packages you may need here
 ]
 
 [build.python_packages]
@@ -12,12 +13,13 @@ torch = "2.1.0"
 diffusers = "0.24.0"
 transformers = "4.36.0"
 runpod = "1.6.0"
+# Add any other python packages you need here
 
 [serverless]
-handler = "handler.handler"
+handler = "handler.handler"  # Make sure the handler is correct (e.g., 'handler.handler' if the function is named 'handler')
 runtime = "python3.10"
-return_aggregate_stream = true
+return_aggregate_stream = true  # Set to false if you don't need streaming responses
 
 [serverless.env]
-CUDA_VISIBLE_DEVICES = "0"
-PYTORCH_CUDA_ALLOC_CONF = "max_split_size_mb:512"
+CUDA_VISIBLE_DEVICES = "0"  # Ensure GPU is available
+PYTORCH_CUDA_ALLOC_CONF = "max_split_size_mb:512"  # Optional: Adjust memory allocation as needed
