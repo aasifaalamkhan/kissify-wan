@@ -8,7 +8,8 @@ ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get dist-upgrade -y && \
+    apt-get install -y \
     python3.10 \
     python3.10-pip \
     python3.10-dev \
@@ -21,8 +22,8 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+    libgomp1 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create symlinks for python
 RUN ln -s /usr/bin/python3.10 /usr/bin/python
