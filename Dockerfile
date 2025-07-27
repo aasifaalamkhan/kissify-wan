@@ -11,7 +11,6 @@ ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 RUN apt-get update && apt-get upgrade -y && apt-get dist-upgrade -y && \
     apt-get install -y \
     python3.10 \
-    python3.10-pip \
     python3.10-dev \
     git \
     wget \
@@ -24,6 +23,11 @@ RUN apt-get update && apt-get upgrade -y && apt-get dist-upgrade -y && \
     libxrender-dev \
     libgomp1 && \
     rm -rf /var/lib/apt/lists/*
+
+# Install pip for Python 3.10 if not installed
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python3.10 get-pip.py && \
+    rm get-pip.py
 
 # Create symlinks for python
 RUN ln -s /usr/bin/python3.10 /usr/bin/python
